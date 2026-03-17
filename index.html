@@ -2,209 +2,43 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SupplyPilot</title>
-
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
-
 <style>
 body{
-margin:0;
-font-family:'DM Sans',sans-serif;
-background:#0B0F1A;
+font-family:Arial;
+background:#0b0f1a;
 color:white;
-}
-#root{height:100vh}
-.sidebar{
-width:220px;
-background:#111827;
-padding:20px;
-}
-.main{
-flex:1;
-padding:30px;
-}
-.layout{
-display:flex;
-height:100vh;
+margin:0;
+padding:40px;
 }
 .card{
-background:#1A2035;
+background:#1a2035;
 padding:20px;
-border-radius:16px;
+border-radius:10px;
 margin-bottom:20px;
-}
-table{
-width:100%;
-font-size:13px;
-border-collapse:collapse;
-}
-th,td{
-padding:8px;
-text-align:left;
-}
-th{
-cursor:pointer;
 }
 </style>
 </head>
 
 <body>
 
-<div id="root"></div>
+<h1>SupplyPilot Dashboard</h1>
+
+<div class="card">
+Articles actifs : <span id="items"></span>
+</div>
+
+<div class="card">
+EOQ moyen : <span id="eoq"></span>
+</div>
 
 <script>
 
-const {useState,useMemo}=React
-const {BarChart,Bar,XAxis,YAxis,Tooltip,ResponsiveContainer}=Recharts
+let items=400
+let eoq= Math.round(100+Math.random()*400)
 
-function generateItems(){
-
-let items=[]
-
-for(let i=1;i<=400;i++){
-
-let demand=Math.floor(1000+Math.random()*19000)
-let cost=10+Math.random()*490
-let orderCost=10+Math.random()*90
-let holdRate=[0.18,0.2,0.25,0.28,0.3][Math.floor(Math.random()*5)]
-let lead=Math.floor(2+Math.random()*30)
-let safety=Math.floor(20+Math.random()*780)
-let stock=Math.floor(Math.random()*1200)
-
-let H=cost*holdRate
-let EOQ=Math.sqrt((2*demand*orderCost)/H)
-let ROP=(demand/365*lead)+safety
-
-items.push({
-sku:"SKU-"+String(i).padStart(4,"0"),
-name:"Item "+i,
-family:["Électrique","Hydraulique","MRO","Mécanique"][Math.floor(Math.random()*4)],
-demand,
-EOQ:Math.round(EOQ),
-ROP:Math.round(ROP),
-stock
-})
-
-}
-
-return items
-}
-
-const ITEMS=generateItems()
-
-function Dashboard(){
-
-const avgEOQ=Math.round(
-ITEMS.reduce((a,b)=>a+b.EOQ,0)/ITEMS.length
-)
-
-const chartData=ITEMS.slice(0,12).map(i=>({
-name:i.sku,
-EOQ:i.EOQ
-}))
-
-return React.createElement("div",null,
-
-React.createElement("div",{className:"card"},
-React.createElement("h3",null,"Articles actifs"),
-React.createElement("div",{style:{fontSize:"28px"}},ITEMS.length)
-),
-
-React.createElement("div",{className:"card"},
-React.createElement("h3",null,"EOQ moyen"),
-React.createElement("div",{style:{fontSize:"28px"}},avgEOQ)
-),
-
-React.createElement("div",{className:"card",style:{height:"300px"}},
-React.createElement(ResponsiveContainer,null,
-React.createElement(BarChart,{data:chartData},
-React.createElement(XAxis,{dataKey:"name"}),
-React.createElement(YAxis,null),
-React.createElement(Tooltip,null),
-React.createElement(Bar,{dataKey:"EOQ"})
-)
-)
-)
-
-)
-
-}
-
-function Inventory(){
-
-const [sort,setSort]=useState("sku")
-
-const sorted=[...ITEMS].sort((a,b)=>{
-if(a[sort]<b[sort]) return -1
-if(a[sort]>b[sort]) return 1
-return 0
-})
-
-return React.createElement("div",{className:"card"},
-
-React.createElement("h3",null,"Inventaire"),
-
-React.createElement("table",null,
-
-React.createElement("thead",null,
-React.createElement("tr",null,
-["sku","name","family","demand","EOQ","ROP","stock"].map(c=>
-React.createElement("th",{onClick:()=>setSort(c)},c)
-)
-)
-),
-
-React.createElement("tbody",null,
-sorted.slice(0,50).map(i=>
-React.createElement("tr",{key:i.sku},
-React.createElement("td",null,i.sku),
-React.createElement("td",null,i.name),
-React.createElement("td",null,i.family),
-React.createElement("td",null,i.demand),
-React.createElement("td",null,i.EOQ),
-React.createElement("td",null,i.ROP),
-React.createElement("td",null,i.stock)
-)
-)
-)
-
-)
-
-)
-
-}
-
-function App(){
-
-const [page,setPage]=useState("dashboard")
-
-let content=null
-
-if(page==="dashboard") content=React.createElement(Dashboard)
-if(page==="inventory") content=React.createElement(Inventory)
-
-return React.createElement("div",{className:"layout"},
-
-React.createElement("div",{className:"sidebar"},
-React.createElement("h2",null,"SupplyPilot"),
-React.createElement("div",{style:{cursor:"pointer"},onClick:()=>setPage("dashboard")},"Dashboard"),
-React.createElement("div",{style:{cursor:"pointer"},onClick:()=>setPage("inventory")},"Inventaire")
-),
-
-React.createElement("div",{className:"main"},content)
-
-)
-
-}
-
-ReactDOM.createRoot(document.getElementById("root")).render(
-React.createElement(App)
-)
+document.getElementById("items").innerText=items
+document.getElementById("eoq").innerText=eoq
 
 </script>
 
