@@ -2,129 +2,484 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>SupplyPilot</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SupplyPilot Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-
+:root{
+  --bg:#0b0f1a;
+  --card:#1a2035;
+  --card2:#111827;
+  --text:#ffffff;
+  --muted:#aab3c5;
+  --accent:#10b981;
+  --warning:#f59e0b;
+  --danger:#ef4444;
+  --border:rgba(255,255,255,0.08);
+}
+*{box-sizing:border-box}
 body{
-font-family:Arial;
-background:#0b0f1a;
-color:white;
-margin:0;
-padding:40px;
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial,sans-serif;
 }
-
+.container{
+  padding:32px;
+}
+h1{
+  margin:0 0 8px 0;
+  font-size:28px;
+}
+.sub{
+  color:var(--muted);
+  margin-bottom:24px;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:16px;
+  margin-bottom:20px;
+}
 .card{
-background:#1a2035;
-padding:20px;
-border-radius:10px;
-margin-bottom:20px;
+  background:var(--card);
+  border-radius:16px;
+  padding:18px;
+  border:1px solid var(--border);
 }
-
+.kpi-label{
+  color:var(--muted);
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  margin-bottom:8px;
+}
+.kpi-value{
+  font-size:30px;
+  font-weight:700;
+}
+.row{
+  display:grid;
+  grid-template-columns:1.2fr 1fr;
+  gap:16px;
+  margin-bottom:16px;
+}
+.row-3{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin-bottom:16px;
+}
+.controls{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+input[type="file"], input[type="text"], select, button{
+  background:var(--card2);
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:10px 12px;
+}
+button{
+  cursor:pointer;
+}
+button:hover{border-color:rgba(16,185,129,0.6)}
+.table-wrap{
+  overflow:auto;
+  max-height:520px;
+}
 table{
-width:100%;
-border-collapse:collapse;
-margin-top:20px;
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
 }
-
 th,td{
-padding:8px;
-border-bottom:1px solid #333;
+  padding:10px 8px;
+  border-bottom:1px solid var(--border);
+  text-align:left;
 }
-
+th{
+  position:sticky;
+  top:0;
+  background:var(--card);
+  cursor:pointer;
+}
+th:hover{color:var(--accent)}
+.badge{
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+}
+.badge-a{background:rgba(16,185,129,0.15); color:#34d399;}
+.badge-b{background:rgba(245,158,11,0.15); color:#fbbf24;}
+.badge-c{background:rgba(59,130,246,0.15); color:#60a5fa;}
+.empty{
+  color:var(--muted);
+  padding:20px 0;
+}
+canvas{
+  width:100% !important;
+  height:340px !important;
+}
+@media (max-width: 980px){
+  .row,.row-3{grid-template-columns:1fr;}
+}
 </style>
-
 </head>
-
 <body>
+<div class="container">
+  <h1>SupplyPilot Dashboard</h1>
+  <div class="sub">Importe ton fichier Excel compatible pour afficher les KPI, graphiques et le tableau interactif.</div>
 
-<h1>SupplyPilot Dashboard</h1>
+  <div class="card" style="margin-bottom:16px;">
+    <div class="controls">
+      <label>Importer fichier Excel :
+        <input type="file" id="excelFile" accept=".xlsx,.xls">
+      </label>
+      <input type="text" id="searchInput" placeholder="Recherche SKU...">
+      <select id="abcFilter">
+        <option value="ALL">Toutes classes ABC</option>
+        <option value="A">Classe A</option>
+        <option value="B">Classe B</option>
+        <option value="C">Classe C</option>
+      </select>
+      <button id="exportBtn">Exporter CSV</button>
+    </div>
+  </div>
 
-<div class="card">
-Importer fichier Excel :
-<input type="file" id="excelFile">
-</div>
+  <div class="grid">
+    <div class="card">
+      <div class="kpi-label">Articles actifs</div>
+      <div class="kpi-value" id="items">0</div>
+    </div>
+    <div class="card">
+      <div class="kpi-label">Demand moyenne</div>
+      <div class="kpi-value" id="avgDemand">0</div>
+    </div>
+    <div class="card">
+      <div class="kpi-label">EOQ moyen</div>
+      <div class="kpi-value" id="avgEOQ">0</div>
+    </div>
+    <div class="card">
+      <div class="kpi-label">ROP moyen</div>
+      <div class="kpi-value" id="avgROP">0</div>
+    </div>
+  </div>
 
-<div class="card">
-Articles actifs : <span id="items">0</span>
-</div>
+  <div class="row">
+    <div class="card">
+      <div style="font-weight:700; margin-bottom:10px;">Top 12 demandes annuelles</div>
+      <canvas id="demandChart"></canvas>
+    </div>
+    <div class="card">
+      <div style="font-weight:700; margin-bottom:10px;">Distribution ABC</div>
+      <canvas id="abcChart"></canvas>
+    </div>
+  </div>
 
-<div class="card">
-EOQ moyen : <span id="eoq">0</span>
-</div>
+  <div class="row-3">
+    <div class="card">
+      <div style="font-weight:700; margin-bottom:10px;">Top 12 EOQ</div>
+      <canvas id="eoqChart"></canvas>
+    </div>
+    <div class="card">
+      <div style="font-weight:700; margin-bottom:10px;">Demand vs ROP</div>
+      <canvas id="scatterChart"></canvas>
+    </div>
+  </div>
 
-<div class="card">
-<table id="table">
-<thead>
-<tr>
-<th>SKU</th>
-<th>Demand</th>
-<th>EOQ</th>
-<th>ROP</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
+  <div class="card">
+    <div style="font-weight:700; margin-bottom:10px;">Tableau articles</div>
+    <div class="table-wrap">
+      <table id="table">
+        <thead>
+          <tr>
+            <th data-key="SKU">SKU</th>
+            <th data-key="Demand">Demand</th>
+            <th data-key="EOQ">EOQ</th>
+            <th data-key="ROP">ROP</th>
+            <th data-key="ABC">ABC</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div id="emptyState" class="empty">Aucune donnée importée.</div>
+  </div>
 </div>
 
 <script>
+let rawRows = [];
+let filteredRows = [];
+let sortKey = "Demand";
+let sortDir = "desc";
+let charts = {};
 
-document.getElementById("excelFile").addEventListener("change",handleFile)
+document.getElementById("excelFile").addEventListener("change", handleFile);
+document.getElementById("searchInput").addEventListener("input", applyFilters);
+document.getElementById("abcFilter").addEventListener("change", applyFilters);
+document.getElementById("exportBtn").addEventListener("click", exportCSV);
+document.querySelectorAll("th[data-key]").forEach(th=>{
+  th.addEventListener("click", ()=>{
+    const key = th.dataset.key;
+    if(sortKey === key){
+      sortDir = sortDir === "desc" ? "asc" : "desc";
+    }else{
+      sortKey = key;
+      sortDir = "desc";
+    }
+    applyFilters();
+  });
+});
 
 function handleFile(e){
+  const file = e.target.files[0];
+  if(!file) return;
 
-const file=e.target.files[0]
-const reader=new FileReader()
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    const data = new Uint8Array(evt.target.result);
+    const workbook = XLSX.read(data,{type:"array"});
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet);
 
-reader.onload=function(evt){
+    rawRows = rows
+      .map(r => ({
+        SKU: (r.SKU ?? "").toString().trim(),
+        Demand: Number(r.Demand ?? 0),
+        EOQ: Number(r.EOQ ?? 0),
+        ROP: Number(r.ROP ?? 0)
+      }))
+      .filter(r => r.SKU && !Number.isNaN(r.Demand) && !Number.isNaN(r.EOQ) && !Number.isNaN(r.ROP));
 
-const data=new Uint8Array(evt.target.result)
-const workbook=XLSX.read(data,{type:"array"})
-const sheet=workbook.Sheets[workbook.SheetNames[0]]
-
-const rows=XLSX.utils.sheet_to_json(sheet)
-
-processData(rows)
-
+    computeABC(rawRows);
+    applyFilters();
+  };
+  reader.readAsArrayBuffer(file);
 }
 
-reader.readAsArrayBuffer(file)
+function computeABC(rows){
+  const sorted = [...rows].sort((a,b)=>(b.Demand*b.EOQ)-(a.Demand*a.EOQ));
+  const totalValue = sorted.reduce((sum,r)=>sum + (r.Demand*r.EOQ), 0) || 1;
+  let cumulative = 0;
 
+  sorted.forEach(r=>{
+    cumulative += (r.Demand*r.EOQ);
+    const ratio = cumulative / totalValue;
+    if(ratio <= 0.80) r.ABC = "A";
+    else if(ratio <= 0.95) r.ABC = "B";
+    else r.ABC = "C";
+  });
 }
 
-function processData(rows){
+function applyFilters(){
+  const term = document.getElementById("searchInput").value.trim().toLowerCase();
+  const abc = document.getElementById("abcFilter").value;
 
-document.getElementById("items").innerText=rows.length
+  filteredRows = rawRows.filter(r=>{
+    const okSearch = !term || r.SKU.toLowerCase().includes(term);
+    const okAbc = abc === "ALL" || r.ABC === abc;
+    return okSearch && okAbc;
+  });
 
-let totalEOQ=0
-let tbody=document.querySelector("#table tbody")
-tbody.innerHTML=""
+  filteredRows.sort((a,b)=>{
+    const av = a[sortKey];
+    const bv = b[sortKey];
+    if(typeof av === "string"){
+      return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+    }
+    return sortDir === "asc" ? av - bv : bv - av;
+  });
 
-rows.forEach(r=>{
-
-totalEOQ+=Number(r.EOQ||0)
-
-let tr=document.createElement("tr")
-
-tr.innerHTML=
-"<td>"+(r.SKU||"")+"</td>"+
-"<td>"+(r.Demand||"")+"</td>"+
-"<td>"+(r.EOQ||"")+"</td>"+
-"<td>"+(r.ROP||"")+"</td>"
-
-tbody.appendChild(tr)
-
-})
-
-let avg=Math.round(totalEOQ/rows.length)
-
-document.getElementById("eoq").innerText=avg
-
+  updateKPIs(filteredRows);
+  renderTable(filteredRows);
+  renderCharts(filteredRows);
 }
 
+function updateKPIs(rows){
+  const n = rows.length;
+  const avgDemand = n ? Math.round(rows.reduce((s,r)=>s+r.Demand,0)/n) : 0;
+  const avgEOQ = n ? Math.round(rows.reduce((s,r)=>s+r.EOQ,0)/n) : 0;
+  const avgROP = n ? Math.round(rows.reduce((s,r)=>s+r.ROP,0)/n) : 0;
+
+  document.getElementById("items").textContent = n;
+  document.getElementById("avgDemand").textContent = formatNumber(avgDemand);
+  document.getElementById("avgEOQ").textContent = formatNumber(avgEOQ);
+  document.getElementById("avgROP").textContent = formatNumber(avgROP);
+}
+
+function renderTable(rows){
+  const tbody = document.querySelector("#table tbody");
+  const empty = document.getElementById("emptyState");
+  tbody.innerHTML = "";
+
+  if(!rows.length){
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  rows.forEach(r=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(r.SKU)}</td>
+      <td>${formatNumber(r.Demand)}</td>
+      <td>${formatNumber(Math.round(r.EOQ))}</td>
+      <td>${formatNumber(Math.round(r.ROP))}</td>
+      <td>${renderAbc(r.ABC)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderAbc(v){
+  const c = v === "A" ? "badge-a" : v === "B" ? "badge-b" : "badge-c";
+  return `<span class="badge ${c}">${v}</span>`;
+}
+
+function renderCharts(rows){
+  destroyCharts();
+  const topDemand = [...rows].sort((a,b)=>b.Demand-a.Demand).slice(0,12);
+  const topEOQ = [...rows].sort((a,b)=>b.EOQ-a.EOQ).slice(0,12);
+  const counts = {
+    A: rows.filter(r=>r.ABC==="A").length,
+    B: rows.filter(r=>r.ABC==="B").length,
+    C: rows.filter(r=>r.ABC==="C").length
+  };
+  const scatter = rows.slice(0,120).map(r=>({x:r.Demand,y:r.ROP}));
+
+  charts.demand = new Chart(document.getElementById("demandChart"), {
+    type:"bar",
+    data:{
+      labels: topDemand.map(r=>r.SKU),
+      datasets:[{
+        label:"Demand",
+        data: topDemand.map(r=>r.Demand),
+        backgroundColor:"rgba(16,185,129,0.7)",
+        borderColor:"rgba(16,185,129,1)",
+        borderWidth:1
+      }]
+    },
+    options: baseOptions()
+  });
+
+  charts.abc = new Chart(document.getElementById("abcChart"), {
+    type:"doughnut",
+    data:{
+      labels:["A","B","C"],
+      datasets:[{
+        data:[counts.A, counts.B, counts.C],
+        backgroundColor:["#10b981","#f59e0b","#3b82f6"],
+        borderColor:["#10b981","#f59e0b","#3b82f6"]
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:"#fff"}}
+      }
+    }
+  });
+
+  charts.eoq = new Chart(document.getElementById("eoqChart"), {
+    type:"bar",
+    data:{
+      labels: topEOQ.map(r=>r.SKU),
+      datasets:[{
+        label:"EOQ",
+        data: topEOQ.map(r=>Math.round(r.EOQ)),
+        backgroundColor:"rgba(59,130,246,0.7)",
+        borderColor:"rgba(59,130,246,1)",
+        borderWidth:1
+      }]
+    },
+    options: baseOptions()
+  });
+
+  charts.scatter = new Chart(document.getElementById("scatterChart"), {
+    type:"scatter",
+    data:{
+      datasets:[{
+        label:"Demand vs ROP",
+        data: scatter,
+        backgroundColor:"rgba(245,158,11,0.8)"
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{
+        x:{ticks:{color:"#cfd7e6"}, grid:{color:"rgba(255,255,255,0.06)"}, title:{display:true, text:"Demand", color:"#fff"}},
+        y:{ticks:{color:"#cfd7e6"}, grid:{color:"rgba(255,255,255,0.06)"}, title:{display:true, text:"ROP", color:"#fff"}}
+      },
+      plugins:{
+        legend:{labels:{color:"#fff"}}
+      }
+    }
+  });
+}
+
+function baseOptions(){
+  return {
+    responsive:true,
+    maintainAspectRatio:false,
+    scales:{
+      x:{ticks:{color:"#cfd7e6"}, grid:{color:"rgba(255,255,255,0.04)"}},
+      y:{ticks:{color:"#cfd7e6"}, grid:{color:"rgba(255,255,255,0.06)"}}
+    },
+    plugins:{
+      legend:{labels:{color:"#fff"}},
+      tooltip:{enabled:true}
+    }
+  };
+}
+
+function destroyCharts(){
+  Object.values(charts).forEach(c => c && c.destroy());
+  charts = {};
+}
+
+function exportCSV(){
+  if(!filteredRows.length) return;
+  const lines = [["SKU","Demand","EOQ","ROP","ABC"]];
+  filteredRows.forEach(r=>{
+    lines.push([r.SKU, r.Demand, Math.round(r.EOQ), Math.round(r.ROP), r.ABC]);
+  });
+  const csv = "\uFEFF" + lines.map(row => row.map(csvEscape).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "supplypilot_export.csv";
+  link.click();
+}
+
+function csvEscape(v){
+  const s = String(v ?? "");
+  if(s.includes(",") || s.includes('"') || s.includes("\n")){
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function formatNumber(n){
+  return new Intl.NumberFormat("fr-CA").format(n);
+}
+
+function escapeHtml(text){
+  return String(text)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
 </script>
-
 </body>
 </html>
