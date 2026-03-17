@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <title>SupplyPilot</title>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
 <style>
+
 body{
 font-family:Arial;
 background:#0b0f1a;
@@ -11,13 +15,27 @@ color:white;
 margin:0;
 padding:40px;
 }
+
 .card{
 background:#1a2035;
 padding:20px;
 border-radius:10px;
 margin-bottom:20px;
 }
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:20px;
+}
+
+th,td{
+padding:8px;
+border-bottom:1px solid #333;
+}
+
 </style>
+
 </head>
 
 <body>
@@ -25,20 +43,86 @@ margin-bottom:20px;
 <h1>SupplyPilot Dashboard</h1>
 
 <div class="card">
-Articles actifs : <span id="items"></span>
+Importer fichier Excel :
+<input type="file" id="excelFile">
 </div>
 
 <div class="card">
-EOQ moyen : <span id="eoq"></span>
+Articles actifs : <span id="items">0</span>
+</div>
+
+<div class="card">
+EOQ moyen : <span id="eoq">0</span>
+</div>
+
+<div class="card">
+<table id="table">
+<thead>
+<tr>
+<th>SKU</th>
+<th>Demand</th>
+<th>EOQ</th>
+<th>ROP</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
 </div>
 
 <script>
 
-let items=400
-let eoq= Math.round(100+Math.random()*400)
+document.getElementById("excelFile").addEventListener("change",handleFile)
 
-document.getElementById("items").innerText=items
-document.getElementById("eoq").innerText=eoq
+function handleFile(e){
+
+const file=e.target.files[0]
+const reader=new FileReader()
+
+reader.onload=function(evt){
+
+const data=new Uint8Array(evt.target.result)
+const workbook=XLSX.read(data,{type:"array"})
+const sheet=workbook.Sheets[workbook.SheetNames[0]]
+
+const rows=XLSX.utils.sheet_to_json(sheet)
+
+processData(rows)
+
+}
+
+reader.readAsArrayBuffer(file)
+
+}
+
+function processData(rows){
+
+document.getElementById("items").innerText=rows.length
+
+let totalEOQ=0
+let tbody=document.querySelector("#table tbody")
+tbody.innerHTML=""
+
+rows.forEach(r=>{
+
+totalEOQ+=Number(r.EOQ||0)
+
+let tr=document.createElement("tr")
+
+tr.innerHTML=
+"<td>"+(r.SKU||"")+"</td>"+
+"<td>"+(r.Demand||"")+"</td>"+
+"<td>"+(r.EOQ||"")+"</td>"+
+"<td>"+(r.ROP||"")+"</td>"
+
+tbody.appendChild(tr)
+
+})
+
+let avg=Math.round(totalEOQ/rows.length)
+
+document.getElementById("eoq").innerText=avg
+
+}
 
 </script>
 
