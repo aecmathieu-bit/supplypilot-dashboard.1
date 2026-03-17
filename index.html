@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SupplyPilot Dashboard</title>
+<title>SupplyPilot Dashboard Volvo</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
@@ -16,6 +16,7 @@
   --accent:#10b981;
   --warning:#f59e0b;
   --danger:#ef4444;
+  --info:#3b82f6;
   --border:rgba(255,255,255,0.08);
 }
 *{box-sizing:border-box}
@@ -26,21 +27,21 @@ body{
   font-family:Arial,sans-serif;
 }
 .container{
-  padding:32px;
+  padding:24px;
 }
 h1{
   margin:0 0 8px 0;
-  font-size:28px;
+  font-size:30px;
 }
 .sub{
   color:var(--muted);
-  margin-bottom:24px;
+  margin-bottom:20px;
 }
 .grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
   gap:16px;
-  margin-bottom:20px;
+  margin-bottom:16px;
 }
 .card{
   background:var(--card);
@@ -65,7 +66,7 @@ h1{
   gap:16px;
   margin-bottom:16px;
 }
-.row-3{
+.row-2{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:16px;
@@ -84,13 +85,11 @@ input[type="file"], input[type="text"], select, button{
   border-radius:10px;
   padding:10px 12px;
 }
-button{
-  cursor:pointer;
-}
+button{cursor:pointer}
 button:hover{border-color:rgba(16,185,129,0.6)}
 .table-wrap{
   overflow:auto;
-  max-height:520px;
+  max-height:560px;
 }
 table{
   width:100%;
@@ -101,12 +100,14 @@ th,td{
   padding:10px 8px;
   border-bottom:1px solid var(--border);
   text-align:left;
+  vertical-align:top;
 }
 th{
   position:sticky;
   top:0;
   background:var(--card);
   cursor:pointer;
+  white-space:nowrap;
 }
 th:hover{color:var(--accent)}
 .badge{
@@ -119,35 +120,91 @@ th:hover{color:var(--accent)}
 .badge-a{background:rgba(16,185,129,0.15); color:#34d399;}
 .badge-b{background:rgba(245,158,11,0.15); color:#fbbf24;}
 .badge-c{background:rgba(59,130,246,0.15); color:#60a5fa;}
+.badge-cat{background:rgba(139,92,246,0.15); color:#c4b5fd;}
+.badge-risk-ok{background:rgba(16,185,129,0.15); color:#34d399;}
+.badge-risk-mid{background:rgba(245,158,11,0.15); color:#fbbf24;}
+.badge-risk-high{background:rgba(239,68,68,0.15); color:#f87171;}
 .empty{
   color:var(--muted);
   padding:20px 0;
+}
+.small{
+  color:var(--muted);
+  font-size:12px;
 }
 canvas{
   width:100% !important;
   height:340px !important;
 }
+.section-title{
+  font-weight:700;
+  margin-bottom:10px;
+}
+.desc-col{
+  min-width:220px;
+}
+.family-col,.cat-col{
+  min-width:160px;
+}
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+  margin-bottom:16px;
+}
+.legend{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+.legend span{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  color:var(--muted);
+  font-size:12px;
+}
+.dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  display:inline-block;
+}
 @media (max-width: 980px){
-  .row,.row-3{grid-template-columns:1fr;}
+  .row,.row-2,.topbar{grid-template-columns:1fr; display:block;}
+  .topbar > div:last-child{margin-top:12px;}
 }
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>SupplyPilot Dashboard</h1>
-  <div class="sub">Importe ton fichier Excel compatible pour afficher les KPI, graphiques et le tableau interactif.</div>
+  <div class="topbar">
+    <div>
+      <h1>SupplyPilot Dashboard Volvo</h1>
+      <div class="sub">Manufacture automobile Volvo — inventaire mixte composants véhicule, assemblage et MRO usine.</div>
+    </div>
+    <div class="small">Importe le fichier Excel Volvo pour afficher les KPI, graphiques et le tableau interactif.</div>
+  </div>
 
   <div class="card" style="margin-bottom:16px;">
     <div class="controls">
       <label>Importer fichier Excel :
         <input type="file" id="excelFile" accept=".xlsx,.xls">
       </label>
-      <input type="text" id="searchInput" placeholder="Recherche SKU...">
+      <input type="text" id="searchInput" placeholder="Recherche SKU ou description...">
       <select id="abcFilter">
         <option value="ALL">Toutes classes ABC</option>
         <option value="A">Classe A</option>
         <option value="B">Classe B</option>
         <option value="C">Classe C</option>
+      </select>
+      <select id="categoryFilter">
+        <option value="ALL">Toutes catégories</option>
+      </select>
+      <select id="familyFilter">
+        <option value="ALL">Toutes familles</option>
       </select>
       <button id="exportBtn">Exporter CSV</button>
     </div>
@@ -170,40 +227,60 @@ canvas{
       <div class="kpi-label">ROP moyen</div>
       <div class="kpi-value" id="avgROP">0</div>
     </div>
+    <div class="card">
+      <div class="kpi-label">Articles critiques</div>
+      <div class="kpi-value" id="criticalCount">0</div>
+    </div>
   </div>
 
   <div class="row">
     <div class="card">
-      <div style="font-weight:700; margin-bottom:10px;">Top 12 demandes annuelles</div>
+      <div class="section-title">Top 12 demandes annuelles</div>
       <canvas id="demandChart"></canvas>
     </div>
     <div class="card">
-      <div style="font-weight:700; margin-bottom:10px;">Distribution ABC</div>
+      <div class="section-title">Distribution ABC</div>
       <canvas id="abcChart"></canvas>
     </div>
   </div>
 
-  <div class="row-3">
+  <div class="row-2">
     <div class="card">
-      <div style="font-weight:700; margin-bottom:10px;">Top 12 EOQ</div>
+      <div class="section-title">Top 12 EOQ</div>
       <canvas id="eoqChart"></canvas>
     </div>
     <div class="card">
-      <div style="font-weight:700; margin-bottom:10px;">Demand vs ROP</div>
+      <div class="section-title">Demand vs ROP</div>
       <canvas id="scatterChart"></canvas>
     </div>
   </div>
 
+  <div class="row-2">
+    <div class="card">
+      <div class="section-title">Répartition par catégorie</div>
+      <canvas id="categoryChart"></canvas>
+    </div>
+    <div class="card">
+      <div class="section-title">Top 10 familles par demande</div>
+      <canvas id="familyChart"></canvas>
+    </div>
+  </div>
+
   <div class="card">
-    <div style="font-weight:700; margin-bottom:10px;">Tableau articles</div>
+    <div class="section-title">Tableau pièces Volvo</div>
+    <div class="small" style="margin-bottom:10px;">Clique sur un en-tête de colonne pour trier.</div>
     <div class="table-wrap">
       <table id="table">
         <thead>
           <tr>
             <th data-key="SKU">SKU</th>
+            <th data-key="Description" class="desc-col">Description</th>
+            <th data-key="Categorie" class="cat-col">Catégorie</th>
+            <th data-key="Famille" class="family-col">Famille</th>
             <th data-key="Demand">Demand</th>
             <th data-key="EOQ">EOQ</th>
             <th data-key="ROP">ROP</th>
+            <th data-key="Risk">Risque</th>
             <th data-key="ABC">ABC</th>
           </tr>
         </thead>
@@ -224,7 +301,10 @@ let charts = {};
 document.getElementById("excelFile").addEventListener("change", handleFile);
 document.getElementById("searchInput").addEventListener("input", applyFilters);
 document.getElementById("abcFilter").addEventListener("change", applyFilters);
+document.getElementById("categoryFilter").addEventListener("change", applyFilters);
+document.getElementById("familyFilter").addEventListener("change", applyFilters);
 document.getElementById("exportBtn").addEventListener("click", exportCSV);
+
 document.querySelectorAll("th[data-key]").forEach(th=>{
   th.addEventListener("click", ()=>{
     const key = th.dataset.key;
@@ -252,16 +332,36 @@ function handleFile(e){
     rawRows = rows
       .map(r => ({
         SKU: (r.SKU ?? "").toString().trim(),
+        Description: (r.Description ?? "").toString().trim(),
+        Categorie: (r.Categorie ?? r.Category ?? "").toString().trim(),
+        Famille: (r.Famille ?? r.Family ?? "").toString().trim(),
         Demand: Number(r.Demand ?? 0),
         EOQ: Number(r.EOQ ?? 0),
         ROP: Number(r.ROP ?? 0)
       }))
-      .filter(r => r.SKU && !Number.isNaN(r.Demand) && !Number.isNaN(r.EOQ) && !Number.isNaN(r.ROP));
+      .filter(r =>
+        r.SKU &&
+        !Number.isNaN(r.Demand) &&
+        !Number.isNaN(r.EOQ) &&
+        !Number.isNaN(r.ROP)
+      )
+      .map(r => ({
+        ...r,
+        Risk: computeRisk(r)
+      }));
 
     computeABC(rawRows);
+    populateDynamicFilters(rawRows);
     applyFilters();
   };
   reader.readAsArrayBuffer(file);
+}
+
+function computeRisk(r){
+  const ratio = r.ROP > 0 ? r.Demand / r.ROP : 0;
+  if(ratio >= 18) return "Élevé";
+  if(ratio >= 10) return "Moyen";
+  return "Faible";
 }
 
 function computeABC(rows){
@@ -278,22 +378,68 @@ function computeABC(rows){
   });
 }
 
+function populateDynamicFilters(rows){
+  fillSelect(
+    document.getElementById("categoryFilter"),
+    [...new Set(rows.map(r=>r.Categorie).filter(Boolean))].sort(),
+    "Toutes catégories"
+  );
+  fillSelect(
+    document.getElementById("familyFilter"),
+    [...new Set(rows.map(r=>r.Famille).filter(Boolean))].sort(),
+    "Toutes familles"
+  );
+}
+
+function fillSelect(select, values, firstLabel){
+  select.innerHTML = "";
+  const allOption = document.createElement("option");
+  allOption.value = "ALL";
+  allOption.textContent = firstLabel;
+  select.appendChild(allOption);
+
+  values.forEach(v=>{
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v;
+    select.appendChild(opt);
+  });
+}
+
 function applyFilters(){
   const term = document.getElementById("searchInput").value.trim().toLowerCase();
   const abc = document.getElementById("abcFilter").value;
+  const category = document.getElementById("categoryFilter").value;
+  const family = document.getElementById("familyFilter").value;
 
   filteredRows = rawRows.filter(r=>{
-    const okSearch = !term || r.SKU.toLowerCase().includes(term);
+    const okSearch =
+      !term ||
+      r.SKU.toLowerCase().includes(term) ||
+      r.Description.toLowerCase().includes(term) ||
+      r.Categorie.toLowerCase().includes(term) ||
+      r.Famille.toLowerCase().includes(term);
+
     const okAbc = abc === "ALL" || r.ABC === abc;
-    return okSearch && okAbc;
+    const okCategory = category === "ALL" || r.Categorie === category;
+    const okFamily = family === "ALL" || r.Famille === family;
+
+    return okSearch && okAbc && okCategory && okFamily;
   });
 
   filteredRows.sort((a,b)=>{
     const av = a[sortKey];
     const bv = b[sortKey];
+
+    if(sortKey === "Risk"){
+      const order = {"Élevé":1,"Moyen":2,"Faible":3};
+      return sortDir === "asc" ? order[av] - order[bv] : order[bv] - order[av];
+    }
+
     if(typeof av === "string"){
       return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
     }
+
     return sortDir === "asc" ? av - bv : bv - av;
   });
 
@@ -307,11 +453,13 @@ function updateKPIs(rows){
   const avgDemand = n ? Math.round(rows.reduce((s,r)=>s+r.Demand,0)/n) : 0;
   const avgEOQ = n ? Math.round(rows.reduce((s,r)=>s+r.EOQ,0)/n) : 0;
   const avgROP = n ? Math.round(rows.reduce((s,r)=>s+r.ROP,0)/n) : 0;
+  const criticalCount = rows.filter(r=>r.Risk === "Élevé").length;
 
-  document.getElementById("items").textContent = n;
+  document.getElementById("items").textContent = formatNumber(n);
   document.getElementById("avgDemand").textContent = formatNumber(avgDemand);
   document.getElementById("avgEOQ").textContent = formatNumber(avgEOQ);
   document.getElementById("avgROP").textContent = formatNumber(avgROP);
+  document.getElementById("criticalCount").textContent = formatNumber(criticalCount);
 }
 
 function renderTable(rows){
@@ -329,9 +477,13 @@ function renderTable(rows){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${escapeHtml(r.SKU)}</td>
+      <td>${escapeHtml(r.Description)}</td>
+      <td><span class="badge badge-cat">${escapeHtml(r.Categorie || "N/A")}</span></td>
+      <td>${escapeHtml(r.Famille || "N/A")}</td>
       <td>${formatNumber(r.Demand)}</td>
       <td>${formatNumber(Math.round(r.EOQ))}</td>
       <td>${formatNumber(Math.round(r.ROP))}</td>
+      <td>${renderRisk(r.Risk)}</td>
       <td>${renderAbc(r.ABC)}</td>
     `;
     tbody.appendChild(tr);
@@ -343,16 +495,37 @@ function renderAbc(v){
   return `<span class="badge ${c}">${v}</span>`;
 }
 
+function renderRisk(v){
+  const c = v === "Élevé" ? "badge-risk-high" : v === "Moyen" ? "badge-risk-mid" : "badge-risk-ok";
+  return `<span class="badge ${c}">${v}</span>`;
+}
+
 function renderCharts(rows){
   destroyCharts();
+
   const topDemand = [...rows].sort((a,b)=>b.Demand-a.Demand).slice(0,12);
   const topEOQ = [...rows].sort((a,b)=>b.EOQ-a.EOQ).slice(0,12);
-  const counts = {
+
+  const abcCounts = {
     A: rows.filter(r=>r.ABC==="A").length,
     B: rows.filter(r=>r.ABC==="B").length,
     C: rows.filter(r=>r.ABC==="C").length
   };
+
   const scatter = rows.slice(0,120).map(r=>({x:r.Demand,y:r.ROP}));
+
+  const categoryMap = {};
+  rows.forEach(r=>{
+    categoryMap[r.Categorie] = (categoryMap[r.Categorie] || 0) + 1;
+  });
+
+  const familyMap = {};
+  rows.forEach(r=>{
+    familyMap[r.Famille] = (familyMap[r.Famille] || 0) + r.Demand;
+  });
+  const topFamilies = Object.entries(familyMap)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,10);
 
   charts.demand = new Chart(document.getElementById("demandChart"), {
     type:"bar",
@@ -374,7 +547,7 @@ function renderCharts(rows){
     data:{
       labels:["A","B","C"],
       datasets:[{
-        data:[counts.A, counts.B, counts.C],
+        data:[abcCounts.A, abcCounts.B, abcCounts.C],
         backgroundColor:["#10b981","#f59e0b","#3b82f6"],
         borderColor:["#10b981","#f59e0b","#3b82f6"]
       }]
@@ -424,6 +597,34 @@ function renderCharts(rows){
       }
     }
   });
+
+  charts.category = new Chart(document.getElementById("categoryChart"), {
+    type:"bar",
+    data:{
+      labels: Object.keys(categoryMap),
+      datasets:[{
+        label:"Nb pièces",
+        data: Object.values(categoryMap),
+        backgroundColor:["#8b5cf6","#10b981","#3b82f6","#f59e0b","#ef4444"]
+      }]
+    },
+    options: baseOptions()
+  });
+
+  charts.family = new Chart(document.getElementById("familyChart"), {
+    type:"bar",
+    data:{
+      labels: topFamilies.map(x=>x[0]),
+      datasets:[{
+        label:"Demand totale",
+        data: topFamilies.map(x=>x[1]),
+        backgroundColor:"rgba(139,92,246,0.7)",
+        borderColor:"rgba(139,92,246,1)",
+        borderWidth:1
+      }]
+    },
+    options: baseOptions()
+  });
 }
 
 function baseOptions(){
@@ -448,15 +649,30 @@ function destroyCharts(){
 
 function exportCSV(){
   if(!filteredRows.length) return;
-  const lines = [["SKU","Demand","EOQ","ROP","ABC"]];
+
+  const lines = [[
+    "SKU","Description","Categorie","Famille","Demand","EOQ","ROP","Risk","ABC"
+  ]];
+
   filteredRows.forEach(r=>{
-    lines.push([r.SKU, r.Demand, Math.round(r.EOQ), Math.round(r.ROP), r.ABC]);
+    lines.push([
+      r.SKU,
+      r.Description,
+      r.Categorie,
+      r.Famille,
+      r.Demand,
+      Math.round(r.EOQ),
+      Math.round(r.ROP),
+      r.Risk,
+      r.ABC
+    ]);
   });
+
   const csv = "\uFEFF" + lines.map(row => row.map(csvEscape).join(",")).join("\n");
   const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = "supplypilot_export.csv";
+  link.download = "supplypilot_volvo_export.csv";
   link.click();
 }
 
@@ -473,7 +689,7 @@ function formatNumber(n){
 }
 
 function escapeHtml(text){
-  return String(text)
+  return String(text ?? "")
     .replaceAll("&","&amp;")
     .replaceAll("<","&lt;")
     .replaceAll(">","&gt;")
